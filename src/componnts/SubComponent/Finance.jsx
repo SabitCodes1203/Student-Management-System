@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { CheckCircle2, DollarSign, Calendar, AlertCircle } from "lucide-react";
 
 // Framer Motion variants
 const container = {
@@ -29,24 +30,32 @@ const card = {
 const Finance = () => {
   const cards = [
     {
-      iconSrc: "/3d%20Icon/ChatGPT%20Image%20Sep%203,%202025,%2004_07_46%20PM.png",
+      icon: CheckCircle2,
       title: "Total Paid",
       description: "Track total income and growth",
+      color: "text-green-600",
+      bgColor: "bg-green-50",
     },
     {
-      iconSrc: "/3d%20Icon/ChatGPT%20Image%20Sep%203,%202025,%2004_09_25%20PM.png",
+      icon: DollarSign,
       title: "Total Payable",
       description: "Analyze market performance",
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
     },
     {
-      iconSrc: "/3d%20Icon/ChatGPT%20Image%20Sep%203,%202025,%2004_28_20%20PM.png",
+      icon: Calendar,
       title: "Installments",
       description: "Plan expenses and savings",
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
     },
     {
-      iconSrc: "/3d%20Icon/ChatGPT%20Image%20Sep%203,%202025,%2004_37_12%20PM.png",
+      icon: AlertCircle,
       title: "Pending",
       description: "Monitor and manage spending",
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
     },
   ];
 
@@ -69,23 +78,26 @@ const Finance = () => {
         whileInView="show"
         viewport={{ once: true, amount: 0.2 }}
       >
-        {cards.map((c, i) => (
-          <motion.div
-            key={i}
-            variants={card}
-            className="flex flex-col items-center justify-center rounded-xl p-6 shadow-md hover:shadow-2xl bg-white transition border-2 border-transparent hover:border-blue-400"
-          >
-            <motion.img
-              src={c.iconSrc}
-              alt={c.title}
-              className="w-20 h-20"
-              whileHover={{ y: -4, rotate: -1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 12 }}
-            />
-            <h2 className="mt-3 text-lg font-semibold">{c.title}</h2>
-            <p className="mt-2 text-sm text-gray-600 text-center">{c.description}</p>
-          </motion.div>
-        ))}
+        {cards.map((c, i) => {
+          const Icon = c.icon;
+          return (
+            <motion.div
+              key={i}
+              variants={card}
+              className="flex flex-col items-center justify-center rounded-xl p-6 shadow-md hover:shadow-2xl bg-white transition border-2 border-transparent hover:border-blue-400"
+            >
+              <motion.div
+                className={`p-4 rounded-xl ${c.bgColor}`}
+                whileHover={{ y: -4, rotate: -1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 12 }}
+              >
+                <Icon className={`w-8 h-8 ${c.color}`} />
+              </motion.div>
+              <h2 className="mt-3 text-lg font-semibold">{c.title}</h2>
+              <p className="mt-2 text-sm text-gray-600 text-center">{c.description}</p>
+            </motion.div>
+          );
+        })}
       </motion.div>
     </motion.div>
   );
