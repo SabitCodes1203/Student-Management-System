@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ClipboardCheck, Calendar, Clock, FileText, Upload, CheckCircle2, AlertCircle, BookOpen, User, Award } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ClipboardCheck, Calendar, Clock, FileText, Upload, CheckCircle2, AlertCircle, BookOpen, User, Award, X } from 'lucide-react';
 
 // Animation variants
 const containerVar = {
@@ -26,7 +26,7 @@ const Assignment = () => {
   const [expandedAssignment, setExpandedAssignment] = useState(null);
 
   // Mock assignment data - replace with actual API calls
-  const assignments = [
+  const [assignments, setAssignments] = useState([
     {
       id: 1,
       courseCode: 'CSE201',
@@ -119,7 +119,14 @@ const Assignment = () => {
       attachments: ['assignment_6.pdf'],
       grade: 88
     }
-  ];
+  ]);
+
+  const [isSubmitModalOpen, setSubmitModalOpen] = useState(false);
+  const [submitForm, setSubmitForm] = useState({
+    assignmentId: null,
+    submissionLink: '',
+    notes: ''
+  });
 
   const getStatusBadge = (status, submitted) => {
     if (submitted) {
@@ -171,6 +178,55 @@ const Assignment = () => {
   };
 
   const statusCounts = getStatusCount();
+
+  const openSubmitModal = (assignment) => {
+    setSubmitForm({
+      assignmentId: assignment.id,
+      submissionLink: assignment.submissionLink || '',
+      notes: assignment.submissionNotes || ''
+    });
+    setSubmitModalOpen(true);
+  };
+
+  const closeSubmitModal = () => {
+    setSubmitModalOpen(false);
+    setSubmitForm({
+      assignmentId: null,
+      submissionLink: '',
+      notes: ''
+    });
+  };
+
+  const handleSubmitInputChange = (field, value) => {
+    setSubmitForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleAssignmentSubmit = (event) => {
+    event.preventDefault();
+    if (!submitForm.assignmentId || !submitForm.submissionLink.trim()) return;
+
+    const submittedDate = new Date().toISOString();
+
+    setAssignments((prevAssignments) =>
+      prevAssignments.map((assignment) =>
+        assignment.id === submitForm.assignmentId
+          ? {
+              ...assignment,
+              submitted: true,
+              status: 'submitted',
+              submittedDate,
+              submissionLink: submitForm.submissionLink.trim(),
+              submissionNotes: submitForm.notes.trim()
+            }
+          : assignment
+      )
+    );
+
+    closeSubmitModal();
+  };
 
   return (
     <div className="w-full space-y-6">
@@ -237,7 +293,7 @@ const Assignment = () => {
           variants={containerVar}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6"
+          className="flex flex-col gap-4 sm:gap-6"
         >
           {filteredAssignments.map((assignment) => {
             const statusConfig = getStatusBadge(assignment.status, assignment.submitted);
@@ -249,7 +305,7 @@ const Assignment = () => {
                 key={assignment.id}
                 variants={cardVar}
                 whileHover={{ y: -4, scale: 1.01 }}
-                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-gray-200"
+                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-gray-200 w-full"
               >
                 {/* Assignment Header */}
                 <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-50 to-purple-50 border-b-2 border-gray-200">
@@ -343,7 +399,8 @@ const Assignment = () => {
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="flex-1 py-2.5 px-4 rounded-lg bg-green-600 text-white font-medium text-sm shadow-md hover:shadow-lg transition-all"
+                      onClick={() => openSubmitModal(assignment)}
+                      className="flex-1 py-2.5 px-4 rounded-lg bg-green-600 text-white font-medium text-sm shadow-md hover:shadow-lg transition-all"
                       >
                         <Upload className="w-4 h-4 inline mr-2" />
                         Submit
@@ -403,6 +460,87 @@ const Assignment = () => {
           </p>
         </motion.div>
       )}
+
+      <AnimatePresence>
+        {isSubmitModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-5"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">Submit Assignment</h3>
+                  <p className="text-sm text-gray-500">
+                    Share your submission details to mark this assignment as complete.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeSubmitModal}
+                  className="rounded-full p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Close submit form"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAssignmentSubmit} className="space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Submission Link
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    value={submitForm.submissionLink}
+                    onChange={(event) => handleSubmitInputChange('submissionLink', event.target.value)}
+                    placeholder="https://..."
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Notes (optional)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={submitForm.notes}
+                    onChange={(event) => handleSubmitInputChange('notes', event.target.value)}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none"
+                    placeholder="Add any context for your instructor..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={closeSubmitModal}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Submit Assignment
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
