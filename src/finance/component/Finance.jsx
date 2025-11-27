@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { DollarSign, CreditCard, Calendar, AlertCircle, CheckCircle2, Clock, Receipt, Download, X } from 'lucide-react';
 
