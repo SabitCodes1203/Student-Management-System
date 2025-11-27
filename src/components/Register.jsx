@@ -65,25 +65,10 @@ const Register = () => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      // Show detailed error message from backend if available
-      let errorMessage = 'Registration failed. Please try again.';
-      
-      if (err.response?.data) {
-        const data = err.response.data;
-        // Handle validation errors from NestJS
-        if (Array.isArray(data.message)) {
-          errorMessage = data.message.join(', ');
-        } else if (data.message) {
-          errorMessage = data.message;
-        } else if (data.error) {
-          errorMessage = typeof data.error === 'string' ? data.error : 'Validation error';
-        }
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
+      // Show error message
+      const errorMessage = err.message || 'Registration failed. Please try again.';
       setLocalError(errorMessage);
-      console.error('Registration error:', err.response?.data || err);
+      console.error('Registration error:', err);
     } finally {
       setIsLoading(false);
     }

@@ -46,7 +46,7 @@ const AuthPage = ({ initialTab = 'signup' }) => {
       await login(loginData.email, loginData.password);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -86,15 +86,7 @@ const AuthPage = ({ initialTab = 'signup' }) => {
         setSuccess('');
       }, 2000);
     } catch (err) {
-      let errorMessage = 'Registration failed. Please try again.';
-      if (err.response?.data) {
-        const data = err.response.data;
-        if (Array.isArray(data.message)) {
-          errorMessage = data.message.join(', ');
-        } else if (data.message) {
-          errorMessage = data.message;
-        }
-      }
+      const errorMessage = err.message || 'Registration failed. Please try again.';
       setError(errorMessage);
     } finally {
       setIsLoading(false);

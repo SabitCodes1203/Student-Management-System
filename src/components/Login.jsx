@@ -32,7 +32,7 @@ const Login = () => {
       await login(formData.email, formData.password);
       navigate('/');
     } catch (err) {
-      setLocalError(err.response?.data?.message || 'Login failed. Please try again.');
+      setLocalError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

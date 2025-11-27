@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext(null);
@@ -10,6 +9,24 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+// Helper functions for localStorage user management
+const getUsersFromStorage = () => {
+  try {
+    const users = localStorage.getItem('app_users');
+    return users ? JSON.parse(users) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveUsersToStorage = (users) => {
+  try {
+    localStorage.setItem('app_users', JSON.stringify(users));
+  } catch (error) {
+    console.error('Error saving users to storage:', error);
+  }
 };
 
 export const AuthProvider = ({ children }) => {
@@ -23,46 +40,23 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuth = () => {
     try {
-      // First check localStorage for cached user
+      // Check localStorage for cached user
       const cachedUser = localStorage.getItem('user');
       if (cachedUser) {
         try {
           const parsedUser = JSON.parse(cachedUser);
           setUser(parsedUser);
-          // Verify with backend that user is still authenticated
-          try {
-            const profile = await authAPI.getProfile();
-            setUser(profile);
-            localStorage.setItem('user', JSON.stringify(profile));
-          } catch (err) {
-            // If verification fails (401 or network error), clear cached user
-            setUser(null);
-            localStorage.removeItem('user');
-          }
         } catch (err) {
           // Invalid JSON in localStorage
           localStorage.removeItem('user');
           setUser(null);
         }
       } else {
-        // No cached user, try to get profile from backend (in case cookie exists)
-        try {
-          const profile = await authAPI.getProfile();
-          setUser(profile);
-          localStorage.setItem('user', JSON.stringify(profile));
-        } catch (err) {
-          // No valid session (401) or backend unavailable - that's ok, user is not authenticated
-          // Don't log 401 errors as they're expected for unauthenticated users
-          if (err.response?.status !== 401) {
-            console.error('Auth check error:', err);
-          }
-          setUser(null);
-        }
+        setUser(null);
       }
     } catch (err) {
-      // Catch any unexpected errors
       console.error('Auth check error:', err);
       setUser(null);
     } finally {
@@ -73,38 +67,106 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       setError(null);
-      const response = await authAPI.register(userData);
-      return response;
+      
+      // Get existing users
+      const users = getUsersFromStorage();
+      
+      // Check if user already exists
+      const existingUser = users.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
+      if (existingUser) {
+        throw new Error('User with this email already exists');
+      }
+      
+      // Create new user object
+      const newUser = {
+        id: Date.now().toString(), // Simple ID generation
+        fullName: userData.fullName,
+        email: userData.email.toLowerCase(),
+        password: userData.password, // In production, you'd hash this
+        mobileNumber: userData.mobileNumber || '',
+        gender: userData.gender || '',
+        dateOfBirth: userData.dateOfBirth || '',
+        createdAt: new Date().toISOString(),
+      };
+      
+      // Add user to storage
+      users.push(newUser);
+      saveUsersToStorage(users);
+      
+      // Return success response (matching backend format)
+      return {
+        message: 'Registration successful',
+        user: {
+          id: newUser.id,
+          fullName: newUser.fullName,
+          email: newUser.email,
+          mobileNumber: newUser.mobileNumber,
+          gender: newUser.gender,
+          dateOfBirth: newUser.dateOfBirth,
+        },
+      };
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'Registration failed';
+      const errorMessage = err.message || 'Registration failed';
       setError(errorMessage);
-      throw err;
+      throw new Error(errorMessage);
     }
   };
 
   const login = async (email, password) => {
     try {
       setError(null);
-      const response = await authAPI.login({ email, password });
-      setUser(response.user);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      return response;
+      
+      // Get users from storage
+      const users = getUsersFromStorage();
+      
+      // Find user by email
+      const foundUser = users.find(
+        u => u.email.toLowerCase() === email.toLowerCase()
+      );
+      
+      if (!foundUser) {
+        throw new Error('Invalid email or password');
+      }
+      
+      // Check password (in production, you'd compare hashed passwords)
+      if (foundUser.password !== password) {
+        throw new Error('Invalid email or password');
+      }
+      
+      // Create user object without password
+      const userData = {
+        id: foundUser.id,
+        fullName: foundUser.fullName,
+        email: foundUser.email,
+        mobileNumber: foundUser.mobileNumber,
+        gender: foundUser.gender,
+        dateOfBirth: foundUser.dateOfBirth,
+      };
+      
+      // Set user in state and localStorage
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Return success response (matching backend format)
+      return {
+        message: 'Login successful',
+        user: userData,
+      };
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'Login failed';
+      const errorMessage = err.message || 'Login failed';
       setError(errorMessage);
-      throw err;
+      throw new Error(errorMessage);
     }
   };
 
   const logout = async () => {
     try {
-      await authAPI.logout();
       setUser(null);
       localStorage.removeItem('user');
       navigate('/login');
     } catch (err) {
       console.error('Logout error:', err);
-      // Still clear local state even if API call fails
+      // Still clear local state even if there's an error
       setUser(null);
       localStorage.removeItem('user');
       navigate('/login');
@@ -124,4 +186,3 @@ export const AuthProvider = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
